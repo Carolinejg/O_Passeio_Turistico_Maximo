@@ -1,10 +1,13 @@
-# Passeio Turístico Máximo (Backtracking)
+# Passeio Turístico Máximo (Backtracking + Heurística Gulosa)
 
 **Desenvolvido por Caroline Souza**
 
-Este repositório contém a implementação e análise experimental de uma abordagem de **backtracking exaustivo** para o problema do **Passeio Turístico Máximo** em grafos completos ponderados.
+Este repositório contém a implementação e análise experimental de duas abordagens para o problema do **Passeio Turístico Máximo** em grafos completos ponderados:
 
-O foco principal é estudar o comportamento do algoritmo em instâncias geradas aleatoriamente com pesos entre `1` e `100` e comparar métricas como tempo de execução, chamadas recursivas, peso do caminho e tamanho do caminho.
+- **Backtracking exaustivo**, que busca o caminho ótimo entre `start` e `end`.
+- **Heurística gulosa**, que escolhe localmente a aresta de maior peso a cada passo.
+
+O foco principal é estudar o comportamento dessas abordagens em instâncias geradas aleatoriamente com pesos entre `1` e `100` e comparar métricas como tempo de execução, chamadas recursivas, peso do caminho e tamanho do caminho.
 
 ---
 
@@ -140,6 +143,8 @@ Os gráficos gerados são:
 ## 📝 Observações sobre a abordagem
 
 - O algoritmo atual utiliza **backtracking exaustivo** e não aplica podas heurísticas.
+- O benchmark também inclui uma **heurística gulosa** para comparação de qualidade e tempo.
+- A heurística gulosa é mais rápida, mas não garante solução ótima porque faz escolhas locais sem considerar o caminho completo.
 - A geração de pesos é determinística quando a mesma semente (`--seed`) é utilizada.
 - O tempo de execução pode variar entre máquinas, mas as métricas de caminho e o número de chamadas recursivas são repetíveis para a mesma instância.
 
