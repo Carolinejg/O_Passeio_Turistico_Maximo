@@ -71,6 +71,34 @@ Use o CLI para gerar um grafo completo ponderado e rodar a busca de `start` até
 python -m passeio_turistico_maximo 5 --seed 42 --start v0 --end v4
 ```
 
+Explicação dos parâmetros:
+
+- `5`: número de vértices do grafo completo. Os valores suportados são `5`, `8`, `10`, `12` e `15`.
+- `--seed 42`: semente para o gerador de números aleatórios. Mantém os pesos das arestas reproduzíveis entre execuções.
+- `--start v0`: vértice de partida para a busca de backtracking. Neste caso, o início é o nó `v0`.
+- `--end v4`: vértice de destino para a busca de backtracking. Neste caso, o alvo é o nó `v4`.
+
+Exemplo de saída esperada:
+
+```text
+Grafo completo com 5 nós
+Início: v0, Destino: v4
+Pesos de arestas:
+v0 {'v1': 82, 'v2': 15, 'v3': 4, 'v4': 95}
+v1 {'v0': 36, 'v2': 32, 'v3': 29, 'v4': 18}
+v2 {'v0': 95, 'v1': 14, 'v3': 87, 'v4': 28}
+v3 {'v0': 94, 'v1': 13, 'v2': 86, 'v4': 48}
+v4 {'v0': 14, 'v1': 20, 'v2': 24, 'v3': 71}
+
+Melhor caminho por backtracking (S→D):
+v0 -> v4
+Peso total: 95
+```
+
+> Os valores acima são ilustrativos. A saída real depende da semente e da implementação exata do gerador.
+
+O comando gera um grafo completo com `n` vértices, apresenta a matriz de pesos das arestas e imprime o melhor caminho encontrado de `start` até `end` pelo algoritmo de backtracking.
+
 ### Executar o benchmark e gerar gráficos
 
 ```powershell
@@ -83,6 +111,11 @@ Os gráficos gerados são:
 - `benchmark_calls.png`
 - `benchmark_weight.png`
 - `benchmark_length.png`
+- `benchmark_time_per_call.png`
+- `benchmark_time_vs_calls.png`
+- `benchmark_boxplot_times.png`
+- `benchmark_boxplot_weights.png`
+- `benchmark_edge_weight_histogram.png`
 
 ---
 
