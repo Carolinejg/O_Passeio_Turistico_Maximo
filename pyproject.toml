@@ -1,0 +1,26 @@
+[project]
+name = "passeio_turistico_maximo"
+version = "0.1.0"
+description = "Projeto Python para o problema do passeio turístico máximo."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+keywords = ["algoritmos", "caminho", "grafos", "passeio turístico"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+passeio-touristico-maximo = "passeio_turistico_maximo.cli:main"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

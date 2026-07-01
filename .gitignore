@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+env/
+venv/
+.idea/
+.vscode/
+.dist-info/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# VS Code settings
+.history/
