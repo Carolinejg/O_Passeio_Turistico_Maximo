@@ -135,8 +135,6 @@ Os gráficos gerados são:
 - `benchmark_boxplot_weights.png`
 - `benchmark_edge_weight_histogram.png`
 
-> `benchmark_boxplot_times.png` e `benchmark_boxplot_weights.png` agora comparam backtracking e heurística gulosa para cada valor de `n`.
-
 ---
 
 ## 📝 Observações sobre a abordagem
