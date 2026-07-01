@@ -11,9 +11,10 @@ O foco principal é estudar o comportamento do algoritmo em instâncias geradas 
 ## 🚀 Destaques Técnicos
 
 - **Backtracking (DFS recursivo):** busca exaustiva de todos os caminhos simples de `start` até `end` em grafos completos ponderados.
+- **Heurística gulosa:** busca rápida que escolhe o próximo vértice com aresta de maior peso local até chegar em `end`.
 - **Geração de instâncias:** grafos completos com pesos randômicos entre `1` e `100` para `n = 5, 8, 10, 12, 15`.
 - **Métricas coletadas:** tempo de execução, número de chamadas recursivas, peso do caminho encontrado e tamanho do caminho.
-- **Benchmark automático:** script que gera gráficos de desempenho e qualidade para análise.
+- **Benchmark automático:** script que gera gráficos comparativos entre backtracking e guloso, além de métricas internas do backtracking.
 
 ---
 
@@ -104,6 +105,15 @@ Peso total: 95
 
 O comando gera um grafo completo com `n` vértices, apresenta a matriz de pesos das arestas e imprime o melhor caminho encontrado de `start` até `end` pelo algoritmo de backtracking.
 
+### Diferença entre CLI e benchmark
+
+- `python -m passeio_turistico_maximo ...` serve para testar um caso específico com `n`, `seed`, `start` e `end` definidos.
+- Ele mostra a saída do algoritmo para essa instância, mas **não gera gráficos**.
+- `python benchmark.py` serve para rodar várias instâncias e coletar métricas para os gráficos do relatório.
+- Os gráficos são gerados pelo benchmark de forma independente dos parâmetros usados no CLI.
+
+Se você quiser no relatório, é uma boa ideia descrever o CLI como forma de ilustrar o funcionamento em um exemplo específico, e usar o benchmark para descrever os resultados experimentais.
+
 ### Executar o benchmark e gerar gráficos
 
 ```powershell
@@ -117,10 +127,13 @@ Os gráficos gerados são:
 - `benchmark_weight.png`
 - `benchmark_length.png`
 - `benchmark_time_per_call.png`
-- `benchmark_time_vs_calls.png`
+- `benchmark_backtracking_time_vs_calls.png`
+- `benchmark_quality_ratio.png`
 - `benchmark_boxplot_times.png`
 - `benchmark_boxplot_weights.png`
 - `benchmark_edge_weight_histogram.png`
+
+> `benchmark_boxplot_times.png` e `benchmark_boxplot_weights.png` agora comparam backtracking e heurística gulosa para cada valor de `n`.
 
 ---
 
