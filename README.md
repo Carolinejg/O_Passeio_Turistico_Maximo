@@ -36,10 +36,15 @@ tests/
 
 ### Descrição dos arquivos principais
 
-- `src/passeio_turistico_maximo/algorithm.py` — implementa a geração de grafos completos ponderados, o algoritmo de backtracking e funções auxiliares de métrica.
-- `src/passeio_turistico_maximo/cli.py` — interface de linha de comando para rodar o algoritmo em instâncias geradas.
-- `benchmark.py` — executa experimentos e gera gráficos para as métricas coletadas.
-- `tests/` — testes unitários para validação do algoritmo e geração de grafos.
+- `benchmark.py` — script de benchmark que executa experimentos, coleta métricas e gera gráficos de desempenho e qualidade.
+- `pyproject.toml` — configuração do pacote Python, metadados do projeto e definição de dependências e entrada CLI.
+- `README.md` — documentação do projeto, instruções de uso e explicação das métricas e dos resultados.
+- `src/passeio_turistico_maximo/__init__.py` — exporta a API do pacote e permite a instalação como módulo Python.
+- `src/passeio_turistico_maximo/__main__.py` — torna o pacote executável com `python -m passeio_turistico_maximo`.
+- `src/passeio_turistico_maximo/algorithm.py` — gera grafos completos ponderados e implementa o algoritmo de backtracking com métricas.
+- `src/passeio_turistico_maximo/cli.py` — define a interface de linha de comando para executar o algoritmo em instâncias geradas.
+- `tests/test_algorithm.py` — testes de unidade para validar a lógica de caminho em grafos simples.
+- `tests/test_weighted_algorithm.py` — testes de unidade para validar a geração de grafos ponderados e métricas do backtracking.
 
 ---
 
