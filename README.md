@@ -115,7 +115,6 @@ O comando gera um grafo completo com `n` vértices, apresenta a matriz de pesos 
 - `python benchmark.py` serve para rodar várias instâncias e coletar métricas para os gráficos do relatório.
 - Os gráficos são gerados pelo benchmark de forma independente dos parâmetros usados no CLI.
 
-Se você quiser no relatório, é uma boa ideia descrever o CLI como forma de ilustrar o funcionamento em um exemplo específico, e usar o benchmark para descrever os resultados experimentais.
 
 ### Executar o benchmark e gerar gráficos
 
