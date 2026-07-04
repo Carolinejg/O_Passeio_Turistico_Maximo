@@ -40,6 +40,45 @@ def path_weight(graph: WeightedGraph, path: Iterable[str]) -> int:
     )
 
 
+def greedy_path(
+    graph: WeightedGraph,
+    start: str,
+    end: str,
+) -> List[str]:
+    """Encontra um caminho usando uma heurística gulosa de maior peso local."""
+    if start not in graph or end not in graph:
+        return []
+
+    current = start
+    visited: Set[str] = {start}
+    path: List[str] = [start]
+
+    while current != end:
+        candidates = [
+            (neighbor, weight)
+            for neighbor, weight in graph[current].items()
+            if neighbor not in visited
+        ]
+        if not candidates:
+            break
+        next_node = max(candidates, key=lambda item: item[1])[0]
+        visited.add(next_node)
+        path.append(next_node)
+        current = next_node
+
+    return path
+
+
+def greedy_path_with_metrics(
+    graph: WeightedGraph,
+    start: str,
+    end: str,
+) -> tuple[List[str], int, int]:
+    """Encontra um caminho guloso e retorna métricas de peso e tamanho."""
+    path = greedy_path(graph, start, end)
+    return path, path_weight(graph, path), len(path)
+
+
 def longest_path_backtracking(
     graph: WeightedGraph,
     start: str,

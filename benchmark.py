@@ -10,7 +10,9 @@ except ImportError:
 
 from passeio_turistico_maximo.algorithm import (
     generate_complete_weighted_graph,
+    greedy_path,
     longest_path_backtracking_with_metrics,
+    path_weight,
 )
 
 # worker() executa o algoritmo de backtracking em um processo separado.
@@ -27,12 +29,23 @@ def collect_edge_weights(graph: Dict[str, Dict[str, int]]) -> List[int]:
     return [weight for edges in graph.values() for weight in edges.values()]
 
 
-def measure_runtime(n: int, seed: int, timeout: float = 60.0) -> Optional[tuple[float, int, int, int, List[int]]]:
-    """Gera uma instância e mede a execução do backtracking com timeout."""
+def measure_runtime(n: int, seed: int, timeout: float = 60.0) -> tuple[
+    Optional[float], Optional[int], Optional[int], Optional[int],
+    Optional[float], Optional[int], Optional[int],
+    List[int]
+]:
+    """Gera uma instância e mede a execução do backtracking e da heurística gulosa."""
     graph = generate_complete_weighted_graph(n, seed=seed)
     edge_weights = collect_edge_weights(graph)
     start = "v0"
     end = f"v{n-1}"
+
+    greedy_start = time.perf_counter()
+    greedy_path_result = greedy_path(graph, start, end)
+    greedy_elapsed = time.perf_counter() - greedy_start
+    greedy_weight = path_weight(graph, greedy_path_result)
+    greedy_length = len(greedy_path_result)
+
     queue: multiprocessing.Queue[Any] = multiprocessing.Queue()
     process = multiprocessing.Process(target=worker, args=(graph, start, end, queue))
     process.start()
@@ -41,18 +54,21 @@ def measure_runtime(n: int, seed: int, timeout: float = 60.0) -> Optional[tuple[
     if process.is_alive():
         process.terminate()
         process.join()
-        return None
+        return None, None, None, None, greedy_elapsed, greedy_weight, greedy_length, edge_weights
 
     if queue.empty():
-        return None
+        return None, None, None, None, greedy_elapsed, greedy_weight, greedy_length, edge_weights
 
     elapsed, calls, weight, length = queue.get()
-    return elapsed, calls, weight, length, edge_weights
+    return elapsed, calls, weight, length, greedy_elapsed, greedy_weight, greedy_length, edge_weights
 
 
 def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> tuple[
     Dict[int, List[Optional[float]]],
     Dict[int, List[Optional[int]]],
+    Dict[int, List[Optional[int]]],
+    Dict[int, List[Optional[int]]],
+    Dict[int, List[Optional[float]]],
     Dict[int, List[Optional[int]]],
     Dict[int, List[Optional[int]]],
     Dict[int, List[int]],
@@ -62,37 +78,72 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
     call_data: Dict[int, List[Optional[int]]] = {}
     weight_data: Dict[int, List[Optional[int]]] = {}
     length_data: Dict[int, List[Optional[int]]] = {}
+    runtime_greedy_data: Dict[int, List[Optional[float]]] = {}
+    weight_greedy_data: Dict[int, List[Optional[int]]] = {}
+    length_greedy_data: Dict[int, List[Optional[int]]] = {}
     weight_distribution_data: Dict[int, List[int]] = {}
     for n in sizes:
         times: List[Optional[float]] = []
         calls: List[Optional[int]] = []
         weights: List[Optional[int]] = []
         lengths: List[Optional[int]] = []
+        greedy_times: List[Optional[float]] = []
+        greedy_weights: List[Optional[int]] = []
+        greedy_lengths: List[Optional[int]] = []
         edge_weights_all: List[int] = []
         print(f"Executando n={n}...")
         for trial in range(1, trials + 1):
             print(f"  tentativa {trial}/{trials}", end="\r")
-            result = measure_runtime(n, seed=trial * 17, timeout=timeout)
-            if result is None:
+            (
+                runtime,
+                recursive_calls,
+                weight,
+                length,
+                greedy_runtime,
+                greedy_weight,
+                greedy_length,
+                edge_weights,
+            ) = measure_runtime(n, seed=trial * 17, timeout=timeout)
+            if runtime is None and greedy_runtime is None:
                 print(f"  tentativa {trial}/{trials}: timeout após {timeout} segundos")
                 times.append(None)
                 calls.append(None)
                 weights.append(None)
                 lengths.append(None)
+                greedy_times.append(None)
+                greedy_weights.append(None)
+                greedy_lengths.append(None)
             else:
-                runtime, recursive_calls, weight, length, edge_weights = result
-                print(f"  tentativa {trial}/{trials}: {runtime:.3f} s, chamadas={recursive_calls}, peso={weight}, tamanho={length}")
+                if runtime is None:
+                    print(f"  tentativa {trial}/{trials}: backtracking timeout; greedy finalizado em {greedy_runtime:.3f} s")
+                else:
+                    print(f"  tentativa {trial}/{trials}: backtracking {runtime:.3f} s, chamadas={recursive_calls}, peso={weight}, tamanho={length}; greedy {greedy_runtime:.3f} s, peso={greedy_weight}, tamanho={greedy_length}")
                 times.append(runtime)
                 calls.append(recursive_calls)
                 weights.append(weight)
                 lengths.append(length)
+                greedy_times.append(greedy_runtime)
+                greedy_weights.append(greedy_weight)
+                greedy_lengths.append(greedy_length)
                 edge_weights_all.extend(edge_weights)
         runtime_data[n] = times
         call_data[n] = calls
         weight_data[n] = weights
         length_data[n] = lengths
+        runtime_greedy_data[n] = greedy_times
+        weight_greedy_data[n] = greedy_weights
+        length_greedy_data[n] = greedy_lengths
         weight_distribution_data[n] = edge_weights_all
-    return runtime_data, call_data, weight_data, length_data, weight_distribution_data
+    return (
+        runtime_data,
+        call_data,
+        weight_data,
+        length_data,
+        runtime_greedy_data,
+        weight_greedy_data,
+        length_greedy_data,
+        weight_distribution_data,
+    )
 
 
 def summarize(
@@ -100,49 +151,43 @@ def summarize(
     call_data: Dict[int, List[Optional[int]]],
     weight_data: Dict[int, List[Optional[int]]],
     length_data: Dict[int, List[Optional[int]]],
+    runtime_greedy_data: Dict[int, List[Optional[float]]],
+    weight_greedy_data: Dict[int, List[Optional[int]]],
+    length_greedy_data: Dict[int, List[Optional[int]]],
 ) -> None:
     """Imprime um resumo tabular das métricas coletadas."""
-    print("\nResumo de tempos, chamadas recursivas, peso e tamanho do caminho:")
-    print("n    tempos (s)                       média (s)    chamadas                      média chamadas    peso                      média peso    tamanho                      média tamanho")
-    for n in runtime_data:
-        times = runtime_data[n]
-        calls = call_data[n]
-        weights = weight_data[n]
-        lengths = length_data[n]
-        time_str = ", ".join(
-            "timeout" if t is None else f"{t:.3f}"
-            for t in times
-        )
-        call_str = ", ".join(
-            "timeout" if c is None else str(c)
-            for c in calls
-        )
-        weight_str = ", ".join(
-            "timeout" if w is None else str(w)
-            for w in weights
-        )
-        length_str = ", ".join(
-            "timeout" if l is None else str(l)
-            for l in lengths
-        )
-        valid_times = [t for t in times if t is not None]
-        valid_calls = [c for c in calls if c is not None]
-        valid_weights = [w for w in weights if w is not None]
-        valid_lengths = [l for l in lengths if l is not None]
-        valid_time_per_call = [t / c for t, c in zip(times, calls) if t is not None and c is not None and c > 0]
-        avg_time = statistics.mean(valid_times) if valid_times else None
-        avg_calls = statistics.mean(valid_calls) if valid_calls else None
-        avg_weight = statistics.mean(valid_weights) if valid_weights else None
-        avg_length = statistics.mean(valid_lengths) if valid_lengths else None
-        avg_time_per_call = statistics.mean(valid_time_per_call) if valid_time_per_call else None
-        avg_time_str = f"{avg_time:.3f}" if avg_time is not None else "timeout"
-        avg_calls_str = f"{avg_calls:.0f}" if avg_calls is not None else "timeout"
-        avg_weight_str = f"{avg_weight:.0f}" if avg_weight is not None else "timeout"
-        avg_length_str = f"{avg_length:.0f}" if avg_length is not None else "timeout"
-        avg_time_per_call_str = f"{avg_time_per_call:.6f}" if avg_time_per_call is not None else "timeout"
+    print("\nResumo comparativo: backtracking vs guloso")
+    print(
+        "n | BT tempo médio (s) | GR tempo médio (s) | BT peso médio | GR peso médio | "
+        "razão peso (GR/BT) | BT tamanho médio | GR tamanho médio"
+    )
+    for n in sorted(runtime_data):
+        bt_times = [t for t in runtime_data[n] if t is not None]
+        bt_weights = [w for w in weight_data[n] if w is not None]
+        bt_lengths = [l for l in length_data[n] if l is not None]
+        gr_times = [t for t in runtime_greedy_data[n] if t is not None]
+        gr_weights = [w for w in weight_greedy_data[n] if w is not None]
+        gr_lengths = [l for l in length_greedy_data[n] if l is not None]
+
+        avg_bt_time = statistics.mean(bt_times) if bt_times else None
+        avg_gr_time = statistics.mean(gr_times) if gr_times else None
+        avg_bt_weight = statistics.mean(bt_weights) if bt_weights else None
+        avg_gr_weight = statistics.mean(gr_weights) if gr_weights else None
+        avg_bt_length = statistics.mean(bt_lengths) if bt_lengths else None
+        avg_gr_length = statistics.mean(gr_lengths) if gr_lengths else None
+        quality_ratios = [gr / bt for gr, bt in zip(gr_weights, bt_weights) if gr is not None and bt is not None and bt > 0]
+        avg_quality_ratio = statistics.mean(quality_ratios) if quality_ratios else None
+
+        avg_bt_time_str = f"{avg_bt_time:.3f}" if avg_bt_time is not None else "timeout"
+        avg_gr_time_str = f"{avg_gr_time:.3f}" if avg_gr_time is not None else "timeout"
+        avg_bt_weight_str = f"{avg_bt_weight:.0f}" if avg_bt_weight is not None else "timeout"
+        avg_gr_weight_str = f"{avg_gr_weight:.0f}" if avg_gr_weight is not None else "timeout"
+        avg_bt_length_str = f"{avg_bt_length:.0f}" if avg_bt_length is not None else "timeout"
+        avg_gr_length_str = f"{avg_gr_length:.0f}" if avg_gr_length is not None else "timeout"
+        avg_quality_ratio_str = f"{avg_quality_ratio:.3f}" if avg_quality_ratio is not None else "n/a"
+
         print(
-            f"{n:<4} {time_str:<30} {avg_time_str:<12} {call_str:<30} {avg_calls_str}" \
-            f"    {weight_str:<30} {avg_weight_str}    {length_str:<30} {avg_length_str}    {avg_time_per_call_str}"
+            f"{n:<2} | {avg_bt_time_str:<15} | {avg_gr_time_str:<15} | {avg_bt_weight_str:<12} | {avg_gr_weight_str:<12} | {avg_quality_ratio_str:<15} | {avg_bt_length_str:<14} | {avg_gr_length_str:<14}"
         )
 
 
@@ -151,13 +196,17 @@ def plot_data(
     call_data: Dict[int, List[Optional[int]]],
     weight_data: Dict[int, List[Optional[int]]],
     length_data: Dict[int, List[Optional[int]]],
+    runtime_greedy_data: Dict[int, List[Optional[float]]],
+    weight_greedy_data: Dict[int, List[Optional[int]]],
+    length_greedy_data: Dict[int, List[Optional[int]]],
     weight_distribution_data: Dict[int, List[int]],
     output_runtime: str = "benchmark_runtime.png",
     output_calls: str = "benchmark_calls.png",
     output_weight: str = "benchmark_weight.png",
     output_length: str = "benchmark_length.png",
     output_time_per_call: str = "benchmark_time_per_call.png",
-    output_time_vs_calls: str = "benchmark_time_vs_calls.png",
+    output_time_vs_calls: str = "benchmark_backtracking_time_vs_calls.png",
+    output_quality_ratio: str = "benchmark_quality_ratio.png",
     output_boxplot_times: str = "benchmark_boxplot_times.png",
     output_boxplot_weights: str = "benchmark_boxplot_weights.png",
     output_edge_weight_histogram: str = "benchmark_edge_weight_histogram.png",
@@ -167,90 +216,135 @@ def plot_data(
         print("matplotlib não encontrado. Instale com 'pip install matplotlib' para gerar o gráfico.")
         return
 
-    sizes: List[int] = []
-    runtime_averages: List[float] = []
-    call_averages: List[float] = []
-    weight_averages: List[float] = []
-    length_averages: List[float] = []
+    sizes_bt: List[int] = []
+    runtime_bt_averages: List[float] = []
+    weight_bt_averages: List[float] = []
+    length_bt_averages: List[float] = []
     time_per_call_averages: List[float] = []
-    for n in runtime_data:
-        valid_times = [t for t in runtime_data[n] if t is not None]
-        valid_calls = [c for c in call_data[n] if c is not None]
-        valid_weights = [w for w in weight_data[n] if w is not None]
-        valid_lengths = [l for l in length_data[n] if l is not None]
-        valid_time_per_call = [t / c for t, c in zip(runtime_data[n], call_data[n]) if t is not None and c is not None and c > 0]
-        if not valid_times or not valid_calls or not valid_weights or not valid_lengths or not valid_time_per_call:
-            continue
-        sizes.append(n)
-        runtime_averages.append(statistics.mean(valid_times))
-        call_averages.append(statistics.mean(valid_calls))
-        weight_averages.append(statistics.mean(valid_weights))
-        length_averages.append(statistics.mean(valid_lengths))
-        time_per_call_averages.append(statistics.mean(valid_time_per_call))
+    sizes_gr: List[int] = []
+    runtime_gr_averages: List[float] = []
+    weight_gr_averages: List[float] = []
+    length_gr_averages: List[float] = []
+    for n in sorted(runtime_data):
+        valid_bt_times = [t for t in runtime_data[n] if t is not None]
+        valid_bt_calls = [c for c in call_data[n] if c is not None]
+        valid_bt_weights = [w for w in weight_data[n] if w is not None]
+        valid_bt_lengths = [l for l in length_data[n] if l is not None]
+        valid_bt_time_per_call = [t / c for t, c in zip(runtime_data[n], call_data[n]) if t is not None and c is not None and c > 0]
+        valid_gr_times = [t for t in runtime_greedy_data[n] if t is not None]
+        valid_gr_weights = [w for w in weight_greedy_data[n] if w is not None]
+        valid_gr_lengths = [l for l in length_greedy_data[n] if l is not None]
 
-    if not sizes:
+        if valid_bt_times:
+            sizes_bt.append(n)
+            runtime_bt_averages.append(statistics.mean(valid_bt_times))
+        if valid_bt_weights:
+            weight_bt_averages.append(statistics.mean(valid_bt_weights))
+        if valid_bt_lengths:
+            length_bt_averages.append(statistics.mean(valid_bt_lengths))
+        if valid_bt_time_per_call:
+            time_per_call_averages.append(statistics.mean(valid_bt_time_per_call))
+        if valid_gr_times:
+            sizes_gr.append(n)
+            runtime_gr_averages.append(statistics.mean(valid_gr_times))
+        if valid_gr_weights:
+            weight_gr_averages.append(statistics.mean(valid_gr_weights))
+        if valid_gr_lengths:
+            length_gr_averages.append(statistics.mean(valid_gr_lengths))
+
+    if not sizes_gr:
         print("Nenhum tempo válido para plotar.")
         return
 
-    # Gráfico de tempo médio
+    sizes_all = sorted(set(sizes_bt + sizes_gr))
+
+    # Gráfico de tempo médio comparando backtracking e guloso
     plt.figure(figsize=(8, 5))
-    plt.plot(sizes, runtime_averages, marker="o", linestyle="-", color="blue")
-    plt.title("Tempo de execução da busca por backtracking vs n")
+    if sizes_bt:
+        plt.plot(sizes_bt, runtime_bt_averages, marker="o", linestyle="-", color="blue", label="Backtracking")
+    if sizes_gr:
+        plt.plot(sizes_gr, runtime_gr_averages, marker="o", linestyle="--", color="orange", label="Guloso")
+    plt.title("Tempo médio de execução: Backtracking vs Guloso")
     plt.xlabel("Número de vértices n")
     plt.ylabel("Tempo médio de execução (s)")
     plt.grid(True)
-    plt.xticks(sizes)
+    plt.legend()
+    plt.xticks(sizes_all)
     plt.tight_layout()
     plt.savefig(output_runtime)
     print(f"Gráfico de tempo salvo em {output_runtime}")
 
-    # Gráfico de chamadas recursivas médias
+    # Gráfico de peso médio comparando backtracking e guloso
     plt.figure(figsize=(8, 5))
-    plt.plot(sizes, call_averages, marker="o", linestyle="-", color="green")
-    plt.title("Número médio de chamadas recursivas da busca por backtracking vs n")
+    if sizes_bt:
+        plt.plot(sizes_bt, weight_bt_averages, marker="o", linestyle="-", color="red", label="Backtracking")
+    if sizes_gr:
+        plt.plot(sizes_gr, weight_gr_averages, marker="o", linestyle="--", color="purple", label="Guloso")
+    plt.title("Peso médio do caminho: Backtracking vs Guloso")
     plt.xlabel("Número de vértices n")
-    plt.ylabel("Chamadas recursivas médias")
+    plt.ylabel("Peso médio do caminho")
     plt.grid(True)
-    plt.xticks(sizes)
-    plt.tight_layout()
-    plt.savefig(output_calls)
-    print(f"Gráfico de chamadas recursivas salvo em {output_calls}")
-
-    # Gráfico de peso médio do melhor caminho
-    plt.figure(figsize=(8, 5))
-    plt.plot(sizes, weight_averages, marker="o", linestyle="-", color="red")
-    plt.title("Peso médio do melhor caminho por backtracking vs n")
-    plt.xlabel("Número de vértices n")
-    plt.ylabel("Peso médio do melhor caminho")
-    plt.grid(True)
-    plt.xticks(sizes)
+    plt.legend()
+    plt.xticks(sizes_all)
     plt.tight_layout()
     plt.savefig(output_weight)
     print(f"Gráfico de peso salvo em {output_weight}")
 
-    # Gráfico de tamanho médio do melhor caminho
+    # Gráfico de comparação de qualidade relativa (somente quando o backtracking terminou)
+    quality_ratios: List[float] = []
+    quality_sizes: List[int] = []
+    for n in sorted(runtime_data):
+        completed_pairs: List[tuple[float, float]] = []
+        for bt_time, bt_weight, gr_weight in zip(runtime_data[n], weight_data[n], weight_greedy_data[n]):
+            if bt_time is not None and bt_weight is not None and gr_weight is not None and bt_weight > 0:
+                completed_pairs.append((float(bt_weight), float(gr_weight)))
+
+        if completed_pairs:
+            bt_weights = [bt_weight for bt_weight, _ in completed_pairs]
+            gr_weights = [gr_weight for _, gr_weight in completed_pairs]
+            quality_sizes.append(n)
+            quality_ratios.append(statistics.mean(gr_weights) / statistics.mean(bt_weights))
+
+    if quality_sizes:
+        plt.figure(figsize=(8, 5))
+        plt.plot(quality_sizes, quality_ratios, marker="o", linestyle="-", color="brown")
+        plt.title("Qualidade relativa (somente casos concluídos): peso guloso / peso ótimo vs n")
+        plt.xlabel("Número de vértices n")
+        plt.ylabel("Razão de peso (guloso / ótimo)")
+        plt.grid(True)
+        plt.xticks(quality_sizes)
+        plt.tight_layout()
+        plt.savefig(output_quality_ratio)
+        print(f"Gráfico de qualidade relativa salvo em {output_quality_ratio}")
+
+    # Gráfico de tamanho médio comparando backtracking e guloso
     plt.figure(figsize=(8, 5))
-    plt.plot(sizes, length_averages, marker="o", linestyle="-", color="purple")
-    plt.title("Tamanho médio do melhor caminho por backtracking vs n")
+    if sizes_bt:
+        plt.plot(sizes_bt, length_bt_averages, marker="o", linestyle="-", color="purple", label="Backtracking")
+    if sizes_gr:
+        plt.plot(sizes_gr, length_gr_averages, marker="o", linestyle="--", color="green", label="Guloso")
+    plt.title("Tamanho médio do caminho: Backtracking vs Guloso")
     plt.xlabel("Número de vértices n")
-    plt.ylabel("Tamanho médio do melhor caminho")
+    plt.ylabel("Tamanho médio do caminho")
     plt.grid(True)
-    plt.xticks(sizes)
+    plt.legend()
+    plt.xticks(sizes_all)
     plt.tight_layout()
     plt.savefig(output_length)
     print(f"Gráfico de tamanho salvo em {output_length}")
 
-    # Gráfico de tempo médio por chamada recursiva
-    plt.figure(figsize=(8, 5))
-    plt.plot(sizes, time_per_call_averages, marker="o", linestyle="-", color="orange")
-    plt.title("Tempo médio por chamada recursiva vs n")
-    plt.xlabel("Número de vértices n")
-    plt.ylabel("Tempo médio por chamada (s)")
-    plt.grid(True)
-    plt.xticks(sizes)
-    plt.tight_layout()
-    plt.savefig(output_time_per_call)
-    print(f"Gráfico de tempo por chamada recursiva salvo em {output_time_per_call}")
+    # Gráfico de tempo médio por chamada recursiva (backtracking apenas)
+    if sizes_bt and time_per_call_averages:
+        plt.figure(figsize=(8, 5))
+        plt.plot(sizes_bt, time_per_call_averages, marker="o", linestyle="-", color="orange")
+        plt.title("Tempo médio por chamada recursiva vs n")
+        plt.xlabel("Número de vértices n")
+        plt.ylabel("Tempo médio por chamada (s)")
+        plt.grid(True)
+        plt.xticks(sizes_bt)
+        plt.tight_layout()
+        plt.savefig(output_time_per_call)
+        print(f"Gráfico de tempo por chamada recursiva salvo em {output_time_per_call}")
 
     # Gráfico tempo x chamadas recursivas
     all_times: List[float] = []
@@ -263,7 +357,7 @@ def plot_data(
     if all_times and all_calls:
         plt.figure(figsize=(8, 5))
         plt.scatter(all_calls, all_times, c="blue", alpha=0.7)
-        plt.title("Tempo de execução vs número de chamadas recursivas")
+        plt.title("Tempo de execução vs número de chamadas recursivas (backtracking)")
         plt.xlabel("Chamadas recursivas")
         plt.ylabel("Tempo de execução (s)")
         plt.grid(True)
@@ -271,29 +365,53 @@ def plot_data(
         plt.savefig(output_time_vs_calls)
         print(f"Gráfico de tempo vs chamadas recursivas salvo em {output_time_vs_calls}")
 
-    # Boxplot de variabilidade de tempo por semente
-    valid_sizes_for_time = [n for n in sizes if any(t is not None for t in runtime_data[n])]
-    times_by_n = [[t for t in runtime_data[n] if t is not None] for n in valid_sizes_for_time]
-    if times_by_n and any(times_by_n):
-        plt.figure(figsize=(8, 5))
-        plt.boxplot(times_by_n, labels=[str(n) for n in valid_sizes_for_time], showmeans=True)
-        plt.title("Variabilidade de tempo por semente para diferentes n")
-        plt.xlabel("Número de vértices n")
+    # Boxplot de variabilidade de tempo por semente comparando backtracking e guloso
+    boxplot_time_groups: List[List[float]] = []
+    boxplot_time_labels: List[str] = []
+    positions: List[int] = []
+    for idx, n in enumerate(sorted(runtime_data), start=1):
+        bt_times = [t for t in runtime_data[n] if t is not None]
+        gr_times = [t for t in runtime_greedy_data[n] if t is not None]
+        if bt_times:
+            boxplot_time_groups.append(bt_times)
+            positions.append(idx * 3 - 2)
+            boxplot_time_labels.append(f"{n}-BT")
+        if gr_times:
+            boxplot_time_groups.append(gr_times)
+            positions.append(idx * 3 - 1)
+            boxplot_time_labels.append(f"{n}-GR")
+    if boxplot_time_groups:
+        plt.figure(figsize=(12, 6))
+        plt.boxplot(boxplot_time_groups, positions=positions, labels=boxplot_time_labels, showmeans=True)
+        plt.title("Variabilidade de tempo por semente: Backtracking vs Guloso")
+        plt.xlabel("n e método")
         plt.ylabel("Tempo de execução (s)")
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(output_boxplot_times)
         print(f"Boxplot de tempo salvo em {output_boxplot_times}")
 
-    # Boxplot de variabilidade de peso por semente
-    valid_sizes_for_weight = [n for n in sizes if any(w is not None for w in weight_data[n])]
-    weights_by_n = [[w for w in weight_data[n] if w is not None] for n in valid_sizes_for_weight]
-    if weights_by_n and any(weights_by_n):
-        plt.figure(figsize=(8, 5))
-        plt.boxplot(weights_by_n, labels=[str(n) for n in valid_sizes_for_weight], showmeans=True)
-        plt.title("Variabilidade de peso do melhor caminho por semente para diferentes n")
-        plt.xlabel("Número de vértices n")
-        plt.ylabel("Peso do melhor caminho")
+    # Boxplot de variabilidade de peso por semente comparando backtracking e guloso
+    boxplot_weight_groups: List[List[float]] = []
+    boxplot_weight_labels: List[str] = []
+    positions = []
+    for idx, n in enumerate(sorted(weight_data), start=1):
+        bt_weights = [w for w in weight_data[n] if w is not None]
+        gr_weights = [w for w in weight_greedy_data[n] if w is not None]
+        if bt_weights:
+            boxplot_weight_groups.append(bt_weights)
+            positions.append(idx * 3 - 2)
+            boxplot_weight_labels.append(f"{n}-BT")
+        if gr_weights:
+            boxplot_weight_groups.append(gr_weights)
+            positions.append(idx * 3 - 1)
+            boxplot_weight_labels.append(f"{n}-GR")
+    if boxplot_weight_groups:
+        plt.figure(figsize=(12, 6))
+        plt.boxplot(boxplot_weight_groups, positions=positions, labels=boxplot_weight_labels, showmeans=True)
+        plt.title("Variabilidade de peso por semente: Backtracking vs Guloso")
+        plt.xlabel("n e método")
+        plt.ylabel("Peso do caminho")
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(output_boxplot_weights)
@@ -316,13 +434,33 @@ def plot_data(
 def main() -> None:
     """Ponto de entrada do benchmark."""
     sizes = [5, 8, 10, 12, 15]
-    runtime_data, call_data, weight_data, length_data, weight_distribution_data = run_benchmarks(sizes, trials=2, timeout=60.0)
-    summarize(runtime_data, call_data, weight_data, length_data)
+    (
+        runtime_data,
+        call_data,
+        weight_data,
+        length_data,
+        runtime_greedy_data,
+        weight_greedy_data,
+        length_greedy_data,
+        weight_distribution_data,
+    ) = run_benchmarks(sizes, trials=2, timeout=60.0)
+    summarize(
+        runtime_data,
+        call_data,
+        weight_data,
+        length_data,
+        runtime_greedy_data,
+        weight_greedy_data,
+        length_greedy_data,
+    )
     plot_data(
         runtime_data,
         call_data,
         weight_data,
         length_data,
+        runtime_greedy_data,
+        weight_greedy_data,
+        length_greedy_data,
         weight_distribution_data,
     )
 
