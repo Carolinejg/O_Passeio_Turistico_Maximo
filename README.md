@@ -115,7 +115,6 @@ O comando gera um grafo completo com `n` vértices, apresenta a matriz de pesos 
 - `python benchmark.py` serve para rodar várias instâncias e coletar métricas para os gráficos do relatório.
 - Os gráficos são gerados pelo benchmark de forma independente dos parâmetros usados no CLI.
 
-Se você quiser no relatório, é uma boa ideia descrever o CLI como forma de ilustrar o funcionamento em um exemplo específico, e usar o benchmark para descrever os resultados experimentais.
 
 ### Executar o benchmark e gerar gráficos
 
@@ -135,8 +134,6 @@ Os gráficos gerados são:
 - `benchmark_boxplot_times.png`
 - `benchmark_boxplot_weights.png`
 - `benchmark_edge_weight_histogram.png`
-
-> `benchmark_boxplot_times.png` e `benchmark_boxplot_weights.png` agora comparam backtracking e heurística gulosa para cada valor de `n`.
 
 ---
 
