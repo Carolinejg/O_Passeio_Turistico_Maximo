@@ -10,43 +10,59 @@ Este projeto implementa e compara três abordagens para o problema do **Passeio 
 
 ---
 
+## Descrição dos arquivos principais
+
+- `benchmark.py` — script de benchmark que executa experimentos, coleta métricas e gera gráficos de desempenho, qualidade e comparação entre as abordagens.
+- `pyproject.toml` — configuração do pacote Python, metadados do projeto e definição de dependências e entrada da CLI.
+- `README.md` — documentação do projeto, instruções de uso e resumo das abordagens e gráficos.
+- `src/passeio_turistico_maximo/__init__.py` — exporta a API principal do pacote.
+- `src/passeio_turistico_maximo/__main__.py` — torna o pacote executável com `python -m passeio_turistico_maximo`.
+- `src/passeio_turistico_maximo/algorithm.py` — gera grafos completos ponderados e implementa as abordagens de backtracking, heurística gulosa e branch and bound.
+- `src/passeio_turistico_maximo/cli.py` — define a interface de linha de comando para executar o algoritmo em instâncias geradas.
+- `tests/test_algorithm.py` — testes de unidade para validar a lógica de caminho em grafos simples.
+- `tests/test_weighted_algorithm.py` — testes de unidade para validar a geração de grafos ponderados e as métricas das buscas.
+
+---
+
 ## Visão geral do projeto
 
 As instâncias são geradas aleatoriamente com pesos inteiros entre `1` e `100`. O objetivo é comparar tempo de execução, chamadas recursivas, peso do caminho e tamanho do caminho entre as abordagens.
 
----
+## Execução dos experimentos
 
-## Como instalar e executar
+### Executar o algoritmo de backtracking
 
-### Pré-requisitos
-
-- Python 3.11+
-- `pip`
-
-### Instalação
-
-```powershell
-pip install -e .
-pip install matplotlib
-```
-
-### Executar o algoritmo em uma instância específica
+Use a CLI para gerar um grafo completo ponderado e rodar a busca de `start` até `end`:
 
 ```powershell
 python -m passeio_turistico_maximo 5 --seed 42 --start v0 --end v4
 ```
 
-Esse comando usa a CLI para gerar uma instância única, mostrar o grafo e exibir o caminho encontrado.
+Explicação dos parâmetros:
 
-### Executar o benchmark
+- `5`: número de vértices do grafo completo. Os valores suportados são `5`, `8`, `10`, `12` e `15`.
+- `--seed 42`: semente para o gerador de números aleatórios.
+- `--start v0`: vértice de partida para a busca.
+- `--end v4`: vértice de destino para a busca.
 
-```powershell
-python benchmark.py
+Exemplo de saída esperada:
+
+```text
+Grafo completo com 5 nós
+Início: v0, Destino: v4
+Pesos de arestas:
+v0 {'v1': 82, 'v2': 15, 'v3': 4, 'v4': 95}
+v1 {'v0': 36, 'v2': 32, 'v3': 29, 'v4': 18}
+v2 {'v0': 95, 'v1': 14, 'v3': 87, 'v4': 28}
+v3 {'v0': 94, 'v1': 13, 'v2': 86, 'v4': 48}
+v4 {'v0': 14, 'v1': 20, 'v2': 24, 'v3': 71}
+
+Melhor caminho por backtracking (S→D):
+v0 -> v4
+Peso total: 95
 ```
 
-Esse comando roda várias instâncias e gera os gráficos usados na análise experimental.
-
----
+> Os valores acima são ilustrativos. A saída real depende da semente e da implementação exata do gerador.
 
 ## Diferença entre CLI e benchmark
 
@@ -105,6 +121,7 @@ tests/
 
 ## Referências
 
+- Cormen, T. H.; Leiserson, C. E.; Rivest, R. L.; Stein, C. (2009). *Introduction to Algorithms*. 3. ed. The MIT Press.
 - Garey, M. R. and Johnson, D. S. (1979). *Computers and Intractability: A Guide to the Theory of NP-Completeness.* W. H. Freeman, San Francisco.
 - Skiena, S. S. (1998). *The Algorithm Design Manual.* Springer, New York.
  
