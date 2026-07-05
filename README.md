@@ -134,14 +134,32 @@ Os gráficos gerados são:
 - `benchmark_boxplot_times.png`
 - `benchmark_boxplot_weights.png`
 - `benchmark_edge_weight_histogram.png`
+- `benchmark_branch_and_bound_runtime.png`
+- `benchmark_branch_and_bound_calls.png`
+- `benchmark_branch_and_bound_weight.png`
+- `benchmark_branch_and_bound_pruning.png`
 
 ---
+
+## 📝 Abordagem com branch and bound
+
+Além da versão clássica de backtracking e da heurística gulosa, o projeto também inclui uma variante baseada em **branch and bound**, concebida para reduzir o espaço de busca sem alterar a solução final. Nessa abordagem, a exploração recursiva é conduzida de forma semelhante ao backtracking, porém cada ramo é avaliado por meio de um limite superior estimado para o peso restante do caminho. Sempre que esse limite não puder superar a melhor solução já encontrada, o ramo é podado e não é mais explorado. Essa estratégia permite descartar porções do espaço de busca que não podem levar a uma melhoria, reduzindo significativamente o esforço computacional em instâncias maiores.
+
+Na implementação adotada, o limite superior é obtido a partir de uma estimativa relaxada baseada nos maiores pesos disponíveis entre os vértices ainda não visitados. Embora essa estimativa não seja necessariamente exata, ela é suficiente para eliminar muitos ramos promissores de forma rápida. Como resultado, a versão com branch and bound preserva a corretude da solução, pois apenas ramos que não podem melhorar o valor atual são descartados, mas reduz de maneira expressiva o número de chamadas recursivas e o tempo de execução em relação ao backtracking puro.
+
+Os gráficos adicionais gerados para essa abordagem são os seguintes:
+
+- `benchmark_branch_and_bound_runtime.png`: compara o tempo de execução do backtracking puro com o branch and bound à medida que $n$ cresce. Os resultados mostram que a versão com podas é muito mais eficiente, especialmente para instâncias de tamanho intermediário e grande.
+- `benchmark_branch_and_bound_calls.png`: apresenta a redução no número de chamadas recursivas quando a poda é aplicada. O gráfico evidencia que o branch and bound explora consideravelmente menos nós da árvore de busca do que o backtracking exaustivo.
+- `benchmark_branch_and_bound_weight.png`: confirma que a solução encontrada pela abordagem com branch and bound preserva o mesmo peso ótimo do backtracking, demonstrando que a poda não compromete a corretude do algoritmo.
+- `benchmark_branch_and_bound_pruning.png`: mostra o número médio de podas realizadas ao longo dos experimentos. O crescimento desse valor com $n$ ilustra o ganho obtido com a estratégia de eliminação de ramos inviáveis.
 
 ## 📝 Observações sobre a abordagem
 
 - O algoritmo atual utiliza **backtracking exaustivo** e não aplica podas heurísticas.
 - O benchmark também inclui uma **heurística gulosa** para comparação de qualidade e tempo.
 - A heurística gulosa é mais rápida, mas não garante solução ótima porque faz escolhas locais sem considerar o caminho completo.
+- A versão com **branch and bound** preserva a solução ótima, mas reduz o custo computacional por meio de poda baseada em limites superiores.
 - A geração de pesos é determinística quando a mesma semente (`--seed`) é utilizada.
 - O tempo de execução pode variar entre máquinas, mas as métricas de caminho e o número de chamadas recursivas são repetíveis para a mesma instância.
 

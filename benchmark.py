@@ -12,8 +12,10 @@ from passeio_turistico_maximo.algorithm import (
     generate_complete_weighted_graph,
     greedy_path,
     longest_path_backtracking_with_metrics,
+    longest_path_branch_and_bound_with_metrics,
     path_weight,
 )
+
 
 # worker() executa o algoritmo de backtracking em um processo separado.
 # Isso ajuda a impor timeout para casos de execução muito longa.
@@ -32,9 +34,10 @@ def collect_edge_weights(graph: Dict[str, Dict[str, int]]) -> List[int]:
 def measure_runtime(n: int, seed: int, timeout: float = 60.0) -> tuple[
     Optional[float], Optional[int], Optional[int], Optional[int],
     Optional[float], Optional[int], Optional[int],
+    Optional[float], Optional[int], Optional[int], Optional[int], Optional[int],
     List[int]
 ]:
-    """Gera uma instância e mede a execução do backtracking e da heurística gulosa."""
+    """Gera uma instância e mede a execução do backtracking, da heurística gulosa e do branch and bound."""
     graph = generate_complete_weighted_graph(n, seed=seed)
     edge_weights = collect_edge_weights(graph)
     start = "v0"
@@ -46,6 +49,10 @@ def measure_runtime(n: int, seed: int, timeout: float = 60.0) -> tuple[
     greedy_weight = path_weight(graph, greedy_path_result)
     greedy_length = len(greedy_path_result)
 
+    bb_start = time.perf_counter()
+    bb_path, bb_calls, bb_pruned, bb_weight, bb_length = longest_path_branch_and_bound_with_metrics(graph, start, end)
+    bb_elapsed = time.perf_counter() - bb_start
+
     queue: multiprocessing.Queue[Any] = multiprocessing.Queue()
     process = multiprocessing.Process(target=worker, args=(graph, start, end, queue))
     process.start()
@@ -54,13 +61,55 @@ def measure_runtime(n: int, seed: int, timeout: float = 60.0) -> tuple[
     if process.is_alive():
         process.terminate()
         process.join()
-        return None, None, None, None, greedy_elapsed, greedy_weight, greedy_length, edge_weights
+        return (
+            None,
+            None,
+            None,
+            None,
+            greedy_elapsed,
+            greedy_weight,
+            greedy_length,
+            bb_elapsed,
+            bb_calls,
+            bb_pruned,
+            bb_weight,
+            bb_length,
+            edge_weights,
+        )
 
     if queue.empty():
-        return None, None, None, None, greedy_elapsed, greedy_weight, greedy_length, edge_weights
+        return (
+            None,
+            None,
+            None,
+            None,
+            greedy_elapsed,
+            greedy_weight,
+            greedy_length,
+            bb_elapsed,
+            bb_calls,
+            bb_pruned,
+            bb_weight,
+            bb_length,
+            edge_weights,
+        )
 
     elapsed, calls, weight, length = queue.get()
-    return elapsed, calls, weight, length, greedy_elapsed, greedy_weight, greedy_length, edge_weights
+    return (
+        elapsed,
+        calls,
+        weight,
+        length,
+        greedy_elapsed,
+        greedy_weight,
+        greedy_length,
+        bb_elapsed,
+        bb_calls,
+        bb_pruned,
+        bb_weight,
+        bb_length,
+        edge_weights,
+    )
 
 
 def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> tuple[
@@ -69,6 +118,11 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
     Dict[int, List[Optional[int]]],
     Dict[int, List[Optional[int]]],
     Dict[int, List[Optional[float]]],
+    Dict[int, List[Optional[int]]],
+    Dict[int, List[Optional[int]]],
+    Dict[int, List[Optional[float]]],
+    Dict[int, List[Optional[int]]],
+    Dict[int, List[Optional[int]]],
     Dict[int, List[Optional[int]]],
     Dict[int, List[Optional[int]]],
     Dict[int, List[int]],
@@ -81,6 +135,11 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
     runtime_greedy_data: Dict[int, List[Optional[float]]] = {}
     weight_greedy_data: Dict[int, List[Optional[int]]] = {}
     length_greedy_data: Dict[int, List[Optional[int]]] = {}
+    runtime_bb_data: Dict[int, List[Optional[float]]] = {}
+    call_bb_data: Dict[int, List[Optional[int]]] = {}
+    pruned_bb_data: Dict[int, List[Optional[int]]] = {}
+    weight_bb_data: Dict[int, List[Optional[int]]] = {}
+    length_bb_data: Dict[int, List[Optional[int]]] = {}
     weight_distribution_data: Dict[int, List[int]] = {}
     for n in sizes:
         times: List[Optional[float]] = []
@@ -90,6 +149,11 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
         greedy_times: List[Optional[float]] = []
         greedy_weights: List[Optional[int]] = []
         greedy_lengths: List[Optional[int]] = []
+        bb_times: List[Optional[float]] = []
+        bb_calls: List[Optional[int]] = []
+        bb_pruned: List[Optional[int]] = []
+        bb_weights: List[Optional[int]] = []
+        bb_lengths: List[Optional[int]] = []
         edge_weights_all: List[int] = []
         print(f"Executando n={n}...")
         for trial in range(1, trials + 1):
@@ -102,6 +166,11 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
                 greedy_runtime,
                 greedy_weight,
                 greedy_length,
+                bb_runtime,
+                bb_calls_value,
+                bb_pruned_value,
+                bb_weight_value,
+                bb_length_value,
                 edge_weights,
             ) = measure_runtime(n, seed=trial * 17, timeout=timeout)
             if runtime is None and greedy_runtime is None:
@@ -113,11 +182,20 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
                 greedy_times.append(None)
                 greedy_weights.append(None)
                 greedy_lengths.append(None)
+                bb_times.append(bb_runtime)
+                bb_calls.append(bb_calls_value)
+                bb_pruned.append(bb_pruned_value)
+                bb_weights.append(bb_weight_value)
+                bb_lengths.append(bb_length_value)
             else:
                 if runtime is None:
-                    print(f"  tentativa {trial}/{trials}: backtracking timeout; greedy finalizado em {greedy_runtime:.3f} s")
+                    print(
+                        f"  tentativa {trial}/{trials}: backtracking timeout; greedy finalizado em {greedy_runtime:.3f} s; branch and bound {bb_runtime:.3f} s"
+                    )
                 else:
-                    print(f"  tentativa {trial}/{trials}: backtracking {runtime:.3f} s, chamadas={recursive_calls}, peso={weight}, tamanho={length}; greedy {greedy_runtime:.3f} s, peso={greedy_weight}, tamanho={greedy_length}")
+                    print(
+                        f"  tentativa {trial}/{trials}: backtracking {runtime:.3f} s, chamadas={recursive_calls}, peso={weight}, tamanho={length}; greedy {greedy_runtime:.3f} s, peso={greedy_weight}, tamanho={greedy_length}; branch and bound {bb_runtime:.3f} s, chamadas={bb_calls_value}, podas={bb_pruned_value}, peso={bb_weight_value}, tamanho={bb_length_value}"
+                    )
                 times.append(runtime)
                 calls.append(recursive_calls)
                 weights.append(weight)
@@ -125,6 +203,11 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
                 greedy_times.append(greedy_runtime)
                 greedy_weights.append(greedy_weight)
                 greedy_lengths.append(greedy_length)
+                bb_times.append(bb_runtime)
+                bb_calls.append(bb_calls_value)
+                bb_pruned.append(bb_pruned_value)
+                bb_weights.append(bb_weight_value)
+                bb_lengths.append(bb_length_value)
                 edge_weights_all.extend(edge_weights)
         runtime_data[n] = times
         call_data[n] = calls
@@ -133,6 +216,11 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
         runtime_greedy_data[n] = greedy_times
         weight_greedy_data[n] = greedy_weights
         length_greedy_data[n] = greedy_lengths
+        runtime_bb_data[n] = bb_times
+        call_bb_data[n] = bb_calls
+        pruned_bb_data[n] = bb_pruned
+        weight_bb_data[n] = bb_weights
+        length_bb_data[n] = bb_lengths
         weight_distribution_data[n] = edge_weights_all
     return (
         runtime_data,
@@ -142,6 +230,11 @@ def run_benchmarks(sizes: List[int], trials: int = 3, timeout: float = 60.0) -> 
         runtime_greedy_data,
         weight_greedy_data,
         length_greedy_data,
+        runtime_bb_data,
+        call_bb_data,
+        pruned_bb_data,
+        weight_bb_data,
+        length_bb_data,
         weight_distribution_data,
     )
 
@@ -154,40 +247,45 @@ def summarize(
     runtime_greedy_data: Dict[int, List[Optional[float]]],
     weight_greedy_data: Dict[int, List[Optional[int]]],
     length_greedy_data: Dict[int, List[Optional[int]]],
+    runtime_bb_data: Dict[int, List[Optional[float]]],
+    call_bb_data: Dict[int, List[Optional[int]]],
+    pruned_bb_data: Dict[int, List[Optional[int]]],
+    weight_bb_data: Dict[int, List[Optional[int]]],
+    length_bb_data: Dict[int, List[Optional[int]]],
 ) -> None:
     """Imprime um resumo tabular das métricas coletadas."""
-    print("\nResumo comparativo: backtracking vs guloso")
+    print("\nResumo comparativo: backtracking vs guloso vs branch and bound")
     print(
-        "n | BT tempo médio (s) | GR tempo médio (s) | BT peso médio | GR peso médio | "
-        "razão peso (GR/BT) | BT tamanho médio | GR tamanho médio"
+        "n | BT tempo médio (s) | B&B tempo médio (s) | GR tempo médio (s) | "
+        "BT peso médio | B&B peso médio | GR peso médio | B&B podas médias"
     )
     for n in sorted(runtime_data):
         bt_times = [t for t in runtime_data[n] if t is not None]
         bt_weights = [w for w in weight_data[n] if w is not None]
-        bt_lengths = [l for l in length_data[n] if l is not None]
         gr_times = [t for t in runtime_greedy_data[n] if t is not None]
         gr_weights = [w for w in weight_greedy_data[n] if w is not None]
-        gr_lengths = [l for l in length_greedy_data[n] if l is not None]
+        bb_times = [t for t in runtime_bb_data[n] if t is not None]
+        bb_weights = [w for w in weight_bb_data[n] if w is not None]
+        bb_prunes = [p for p in pruned_bb_data[n] if p is not None]
 
         avg_bt_time = statistics.mean(bt_times) if bt_times else None
         avg_gr_time = statistics.mean(gr_times) if gr_times else None
+        avg_bb_time = statistics.mean(bb_times) if bb_times else None
         avg_bt_weight = statistics.mean(bt_weights) if bt_weights else None
         avg_gr_weight = statistics.mean(gr_weights) if gr_weights else None
-        avg_bt_length = statistics.mean(bt_lengths) if bt_lengths else None
-        avg_gr_length = statistics.mean(gr_lengths) if gr_lengths else None
-        quality_ratios = [gr / bt for gr, bt in zip(gr_weights, bt_weights) if gr is not None and bt is not None and bt > 0]
-        avg_quality_ratio = statistics.mean(quality_ratios) if quality_ratios else None
+        avg_bb_weight = statistics.mean(bb_weights) if bb_weights else None
+        avg_prunes = statistics.mean(bb_prunes) if bb_prunes else None
 
         avg_bt_time_str = f"{avg_bt_time:.3f}" if avg_bt_time is not None else "timeout"
         avg_gr_time_str = f"{avg_gr_time:.3f}" if avg_gr_time is not None else "timeout"
+        avg_bb_time_str = f"{avg_bb_time:.3f}" if avg_bb_time is not None else "timeout"
         avg_bt_weight_str = f"{avg_bt_weight:.0f}" if avg_bt_weight is not None else "timeout"
         avg_gr_weight_str = f"{avg_gr_weight:.0f}" if avg_gr_weight is not None else "timeout"
-        avg_bt_length_str = f"{avg_bt_length:.0f}" if avg_bt_length is not None else "timeout"
-        avg_gr_length_str = f"{avg_gr_length:.0f}" if avg_gr_length is not None else "timeout"
-        avg_quality_ratio_str = f"{avg_quality_ratio:.3f}" if avg_quality_ratio is not None else "n/a"
+        avg_bb_weight_str = f"{avg_bb_weight:.0f}" if avg_bb_weight is not None else "timeout"
+        avg_prunes_str = f"{avg_prunes:.0f}" if avg_prunes is not None else "n/a"
 
         print(
-            f"{n:<2} | {avg_bt_time_str:<15} | {avg_gr_time_str:<15} | {avg_bt_weight_str:<12} | {avg_gr_weight_str:<12} | {avg_quality_ratio_str:<15} | {avg_bt_length_str:<14} | {avg_gr_length_str:<14}"
+            f"{n:<2} | {avg_bt_time_str:<15} | {avg_bb_time_str:<15} | {avg_gr_time_str:<15} | {avg_bt_weight_str:<12} | {avg_bb_weight_str:<12} | {avg_gr_weight_str:<12} | {avg_prunes_str:<12}"
         )
 
 
@@ -258,7 +356,6 @@ def plot_data(
 
     sizes_all = sorted(set(sizes_bt + sizes_gr))
 
-    # Gráfico de tempo médio comparando backtracking e guloso
     plt.figure(figsize=(8, 5))
     if sizes_bt:
         plt.plot(sizes_bt, runtime_bt_averages, marker="o", linestyle="-", color="blue", label="Backtracking")
@@ -274,7 +371,6 @@ def plot_data(
     plt.savefig(output_runtime)
     print(f"Gráfico de tempo salvo em {output_runtime}")
 
-    # Gráfico de peso médio comparando backtracking e guloso
     plt.figure(figsize=(8, 5))
     if sizes_bt:
         plt.plot(sizes_bt, weight_bt_averages, marker="o", linestyle="-", color="red", label="Backtracking")
@@ -290,7 +386,6 @@ def plot_data(
     plt.savefig(output_weight)
     print(f"Gráfico de peso salvo em {output_weight}")
 
-    # Gráfico de comparação de qualidade relativa (somente quando o backtracking terminou)
     quality_ratios: List[float] = []
     quality_sizes: List[int] = []
     for n in sorted(runtime_data):
@@ -317,7 +412,6 @@ def plot_data(
         plt.savefig(output_quality_ratio)
         print(f"Gráfico de qualidade relativa salvo em {output_quality_ratio}")
 
-    # Gráfico de tamanho médio comparando backtracking e guloso
     plt.figure(figsize=(8, 5))
     if sizes_bt:
         plt.plot(sizes_bt, length_bt_averages, marker="o", linestyle="-", color="purple", label="Backtracking")
@@ -333,7 +427,6 @@ def plot_data(
     plt.savefig(output_length)
     print(f"Gráfico de tamanho salvo em {output_length}")
 
-    # Gráfico de tempo médio por chamada recursiva (backtracking apenas)
     if sizes_bt and time_per_call_averages:
         plt.figure(figsize=(8, 5))
         plt.plot(sizes_bt, time_per_call_averages, marker="o", linestyle="-", color="orange")
@@ -346,7 +439,6 @@ def plot_data(
         plt.savefig(output_time_per_call)
         print(f"Gráfico de tempo por chamada recursiva salvo em {output_time_per_call}")
 
-    # Gráfico tempo x chamadas recursivas
     all_times: List[float] = []
     all_calls: List[int] = []
     for n in runtime_data:
@@ -365,7 +457,6 @@ def plot_data(
         plt.savefig(output_time_vs_calls)
         print(f"Gráfico de tempo vs chamadas recursivas salvo em {output_time_vs_calls}")
 
-    # Boxplot de variabilidade de tempo por semente comparando backtracking e guloso
     boxplot_time_groups: List[List[float]] = []
     boxplot_time_labels: List[str] = []
     positions: List[int] = []
@@ -391,7 +482,6 @@ def plot_data(
         plt.savefig(output_boxplot_times)
         print(f"Boxplot de tempo salvo em {output_boxplot_times}")
 
-    # Boxplot de variabilidade de peso por semente comparando backtracking e guloso
     boxplot_weight_groups: List[List[float]] = []
     boxplot_weight_labels: List[str] = []
     positions = []
@@ -417,7 +507,6 @@ def plot_data(
         plt.savefig(output_boxplot_weights)
         print(f"Boxplot de peso salvo em {output_boxplot_weights}")
 
-    # Histograma da distribuição de pesos das arestas
     all_edge_weights = [w for weights in weight_distribution_data.values() for w in weights]
     if all_edge_weights:
         plt.figure(figsize=(8, 5))
@@ -431,6 +520,96 @@ def plot_data(
         print(f"Histograma de pesos das arestas salvo em {output_edge_weight_histogram}")
 
 
+def plot_branch_and_bound_data(
+    runtime_data: Dict[int, List[Optional[float]]],
+    runtime_bb_data: Dict[int, List[Optional[float]]],
+    call_data: Dict[int, List[Optional[int]]],
+    call_bb_data: Dict[int, List[Optional[int]]],
+    weight_data: Dict[int, List[Optional[int]]],
+    weight_bb_data: Dict[int, List[Optional[int]]],
+    pruned_bb_data: Dict[int, List[Optional[int]]],
+    output_runtime: str = "benchmark_branch_and_bound_runtime.png",
+    output_calls: str = "benchmark_branch_and_bound_calls.png",
+    output_weight: str = "benchmark_branch_and_bound_weight.png",
+    output_pruning: str = "benchmark_branch_and_bound_pruning.png",
+) -> None:
+    """Gera gráficos adicionais para comparar backtracking e branch and bound."""
+    if plt is None:
+        print("matplotlib não encontrado. Instale com 'pip install matplotlib' para gerar o gráfico.")
+        return
+
+    sizes = sorted(set(runtime_data) | set(runtime_bb_data))
+    bt_runtime_means = []
+    bb_runtime_means = []
+    bt_call_means = []
+    bb_call_means = []
+    bt_weight_means = []
+    bb_weight_means = []
+    pruned_means = []
+    for n in sizes:
+        bt_times = [t for t in runtime_data[n] if t is not None]
+        bb_times = [t for t in runtime_bb_data[n] if t is not None]
+        bt_calls = [c for c in call_data[n] if c is not None]
+        bb_calls = [c for c in call_bb_data[n] if c is not None]
+        bt_weights = [w for w in weight_data[n] if w is not None]
+        bb_weights = [w for w in weight_bb_data[n] if w is not None]
+        bb_prunings = [p for p in pruned_bb_data[n] if p is not None]
+
+        bt_runtime_means.append(statistics.mean(bt_times) if bt_times else float("nan"))
+        bb_runtime_means.append(statistics.mean(bb_times) if bb_times else float("nan"))
+        bt_call_means.append(statistics.mean(bt_calls) if bt_calls else float("nan"))
+        bb_call_means.append(statistics.mean(bb_calls) if bb_calls else float("nan"))
+        bt_weight_means.append(statistics.mean(bt_weights) if bt_weights else float("nan"))
+        bb_weight_means.append(statistics.mean(bb_weights) if bb_weights else float("nan"))
+        pruned_means.append(statistics.mean(bb_prunings) if bb_prunings else float("nan"))
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(sizes, bt_runtime_means, marker="o", linestyle="-", color="blue", label="Backtracking")
+    plt.plot(sizes, bb_runtime_means, marker="s", linestyle="--", color="green", label="Branch and Bound")
+    plt.title("Tempo de execução: Backtracking vs Branch and Bound")
+    plt.xlabel("Número de vértices n")
+    plt.ylabel("Tempo médio de execução (s)")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_runtime)
+    print(f"Gráfico de tempo branch and bound salvo em {output_runtime}")
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(sizes, bt_call_means, marker="o", linestyle="-", color="blue", label="Backtracking")
+    plt.plot(sizes, bb_call_means, marker="s", linestyle="--", color="green", label="Branch and Bound")
+    plt.title("Chamadas recursivas: Backtracking vs Branch and Bound")
+    plt.xlabel("Número de vértices n")
+    plt.ylabel("Chamadas recursivas médias")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_calls)
+    print(f"Gráfico de chamadas branch and bound salvo em {output_calls}")
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(sizes, bt_weight_means, marker="o", linestyle="-", color="red", label="Backtracking")
+    plt.plot(sizes, bb_weight_means, marker="s", linestyle="--", color="green", label="Branch and Bound")
+    plt.title("Peso médio do caminho: Backtracking vs Branch and Bound")
+    plt.xlabel("Número de vértices n")
+    plt.ylabel("Peso médio do caminho")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_weight)
+    print(f"Gráfico de peso branch and bound salvo em {output_weight}")
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(sizes, pruned_means, marker="s", linestyle="-", color="darkorange")
+    plt.title("Número médio de podas realizadas pelo Branch and Bound")
+    plt.xlabel("Número de vértices n")
+    plt.ylabel("Podas médias")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(output_pruning)
+    print(f"Gráfico de podas branch and bound salvo em {output_pruning}")
+
+
 def main() -> None:
     """Ponto de entrada do benchmark."""
     sizes = [5, 8, 10, 12, 15]
@@ -442,6 +621,11 @@ def main() -> None:
         runtime_greedy_data,
         weight_greedy_data,
         length_greedy_data,
+        runtime_bb_data,
+        call_bb_data,
+        pruned_bb_data,
+        weight_bb_data,
+        length_bb_data,
         weight_distribution_data,
     ) = run_benchmarks(sizes, trials=2, timeout=60.0)
     summarize(
@@ -452,6 +636,11 @@ def main() -> None:
         runtime_greedy_data,
         weight_greedy_data,
         length_greedy_data,
+        runtime_bb_data,
+        call_bb_data,
+        pruned_bb_data,
+        weight_bb_data,
+        length_bb_data,
     )
     plot_data(
         runtime_data,
@@ -462,6 +651,15 @@ def main() -> None:
         weight_greedy_data,
         length_greedy_data,
         weight_distribution_data,
+    )
+    plot_branch_and_bound_data(
+        runtime_data,
+        runtime_bb_data,
+        call_data,
+        call_bb_data,
+        weight_data,
+        weight_bb_data,
+        pruned_bb_data,
     )
 
 

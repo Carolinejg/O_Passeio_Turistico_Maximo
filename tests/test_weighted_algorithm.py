@@ -2,6 +2,7 @@ from passeio_turistico_maximo.algorithm import (
     generate_complete_weighted_graph,
     greedy_path,
     longest_path_backtracking,
+    longest_path_branch_and_bound,
     path_weight,
 )
 
@@ -48,3 +49,14 @@ def test_greedy_path_stops_at_dead_end():
 
 def test_path_weight_on_empty_path():
     assert path_weight(graph=generate_complete_weighted_graph(3, seed=1), path=[]) == 0
+
+
+def test_longest_path_branch_and_bound():
+    graph = generate_complete_weighted_graph(5, seed=7)
+    start, end = "v0", "v4"
+    path = longest_path_branch_and_bound(graph, start, end)
+
+    assert path[0] == start
+    assert path[-1] == end
+    assert set(path) <= set(graph)
+    assert len(path) >= 2
