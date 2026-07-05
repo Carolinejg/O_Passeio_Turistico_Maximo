@@ -50,6 +50,14 @@ Peso total: 95
 
 > Os valores acima são ilustrativos. A saída real depende da semente e da implementação exata do gerador.
 
+### Executar o script principal de benchmark
+
+```powershell
+python benchmark.py
+```
+
+Esse é o comando usado para executar o script principal do projeto. Ele roda várias instâncias, coleta métricas e gera os gráficos comparativos do relatório.
+
 ## Diferença entre CLI e benchmark
 
 - A CLI serve para testar um caso específico com `n`, `seed`, `start` e `end` definidos.
