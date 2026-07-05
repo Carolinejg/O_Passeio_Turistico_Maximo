@@ -10,20 +10,6 @@ Este projeto implementa e compara três abordagens para o problema do **Passeio 
 
 ---
 
-## Descrição dos arquivos principais
-
-- `benchmark.py` — script de benchmark que executa experimentos, coleta métricas e gera gráficos de desempenho, qualidade e comparação entre as abordagens.
-- `pyproject.toml` — configuração do pacote Python, metadados do projeto e definição de dependências e entrada da CLI.
-- `README.md` — documentação do projeto, instruções de uso e resumo das abordagens e gráficos.
-- `src/passeio_turistico_maximo/__init__.py` — exporta a API principal do pacote.
-- `src/passeio_turistico_maximo/__main__.py` — torna o pacote executável com `python -m passeio_turistico_maximo`.
-- `src/passeio_turistico_maximo/algorithm.py` — gera grafos completos ponderados e implementa as abordagens de backtracking, heurística gulosa e branch and bound.
-- `src/passeio_turistico_maximo/cli.py` — define a interface de linha de comando para executar o algoritmo em instâncias geradas.
-- `tests/test_algorithm.py` — testes de unidade para validar a lógica de caminho em grafos simples.
-- `tests/test_weighted_algorithm.py` — testes de unidade para validar a geração de grafos ponderados e as métricas das buscas.
-
----
-
 ## Visão geral do projeto
 
 As instâncias são geradas aleatoriamente com pesos inteiros entre `1` e `100`. O objetivo é comparar tempo de execução, chamadas recursivas, peso do caminho e tamanho do caminho entre as abordagens.
@@ -73,6 +59,37 @@ Peso total: 95
 
 ---
 
+## Estrutura do projeto
+
+```text
+benchmark.py
+pyproject.toml
+README.md
+src/
+  passeio_turistico_maximo/
+    __init__.py
+    __main__.py
+    algorithm.py
+    cli.py
+tests/
+  test_algorithm.py
+  test_weighted_algorithm.py
+```
+
+### Descrição dos arquivos principais
+
+- `benchmark.py` — script de benchmark que executa experimentos, coleta métricas e gera gráficos de desempenho e qualidade.
+- `pyproject.toml` — configuração do pacote Python, metadados do projeto e definição de dependências e entrada CLI.
+- `README.md` — documentação do projeto, instruções de uso e explicação das métricas e dos resultados.
+- `src/passeio_turistico_maximo/__init__.py` — exporta a API do pacote e permite a instalação como módulo Python.
+- `src/passeio_turistico_maximo/__main__.py` — torna o pacote executável com `python -m passeio_turistico_maximo`.
+- `src/passeio_turistico_maximo/algorithm.py` — gera grafos completos ponderados e implementa o algoritmo de backtracking com métricas.
+- `src/passeio_turistico_maximo/cli.py` — define a interface de linha de comando para executar o algoritmo em instâncias geradas.
+- `tests/test_algorithm.py` — testes de unidade para validar a lógica de caminho em grafos simples.
+- `tests/test_weighted_algorithm.py` — testes de unidade para validar a geração de grafos ponderados e métricas do backtracking.
+
+---
+
 ## Lista dos gráficos
 
 - `benchmark_runtime.png`
@@ -97,25 +114,6 @@ Peso total: 95
 - **Backtracking:** explora todos os caminhos simples e garante a solução ótima, mas cresce rapidamente em custo computacional.
 - **Heurística gulosa:** é muito rápida, mas não garante ótimo global.
 - **Branch and bound:** mantém a garantia de otimalidade e reduz o número de estados explorados por meio de poda.
-
----
-
-## Estrutura do projeto
-
-```text
-benchmark.py
-pyproject.toml
-README.md
-src/
-  passeio_turistico_maximo/
-    __init__.py
-    __main__.py
-    algorithm.py
-    cli.py
-tests/
-  test_algorithm.py
-  test_weighted_algorithm.py
-```
 
 ---
 
