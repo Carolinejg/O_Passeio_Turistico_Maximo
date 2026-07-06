@@ -18,6 +18,7 @@ As instâncias são geradas aleatoriamente com pesos inteiros entre `1` e `100`.
 
 - Python 3.11+
 - `pip`
+- `matplotlib` para a geração dos gráficos
 
 ## Execução dos experimentos
 
