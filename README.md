@@ -14,35 +14,59 @@ Este projeto implementa e compara três abordagens para o problema do **Passeio 
 
 As instâncias são geradas aleatoriamente com pesos inteiros entre `1` e `100`. O objetivo é comparar tempo de execução, chamadas recursivas, peso do caminho e tamanho do caminho entre as abordagens.
 
-## Execução
-
 ### Pré-requisitos
 
 - Python 3.11+
 - `pip`
 
-### CLI
+## Execução dos experimentos
 
-Use a interface de linha de comando para executar uma instância específica do problema:
+### Executar o algoritmo de backtracking
+
+Use a CLI para gerar um grafo completo ponderado e rodar a busca de `start` até `end`:
 
 ```powershell
 python -m passeio_turistico_maximo 5 --seed 42 --start v0 --end v4
 ```
 
-Esse comando gera um grafo completo ponderado, executa a busca e exibe o caminho encontrado com o respectivo peso total.
+Explicação dos parâmetros:
 
-### Benchmark
+- `5`: número de vértices do grafo completo. Os valores suportados são `5`, `8`, `10`, `12` e `15`.
+- `--seed 42`: semente para o gerador de números aleatórios. Mantém os pesos das arestas reproduzíveis entre execuções.
+- `--start v0`: vértice de partida para a busca de backtracking. Neste caso, o início é o nó `v0`.
+- `--end v4`: vértice de destino para a busca de backtracking. Neste caso, o alvo é o nó `v4`.
+
+Exemplo de saída esperada:
+
+```text
+Grafo completo com 5 nós
+Início: v0, Destino: v4
+Pesos de arestas:
+v0 {'v1': 82, 'v2': 15, 'v3': 4, 'v4': 95}
+v1 {'v0': 36, 'v2': 32, 'v3': 29, 'v4': 18}
+v2 {'v0': 95, 'v1': 14, 'v3': 87, 'v4': 28}
+v3 {'v0': 94, 'v1': 13, 'v2': 86, 'v4': 48}
+v4 {'v0': 14, 'v1': 20, 'v2': 24, 'v3': 71}
+
+Melhor caminho por backtracking (S→D):
+v0 -> v4
+Peso total: 95
+```
+
+> Os valores acima são ilustrativos. A saída real depende da semente e da implementação exata do gerador.
+
+### Executar o script principal de benchmark
 
 ```powershell
 python benchmark.py
 ```
 
-Esse é o script principal de experimentação. Ele roda múltiplas instâncias, coleta métricas e gera os gráficos comparativos do relatório.
+Esse é o comando usado para executar o script principal do projeto. Ele roda várias instâncias, coleta métricas e gera os gráficos comparativos do relatório.
 
-### CLI x Benchmark
+## Diferença entre CLI e benchmark
 
 - A CLI serve para testar um caso específico com `n`, `seed`, `start` e `end` definidos.
-- O benchmark serve para avaliar desempenho e qualidade em várias instâncias.
+- O benchmark serve para medir desempenho e qualidade em várias instâncias.
 - A CLI mostra o resultado de uma execução isolada.
 - O benchmark coleta métricas e salva os gráficos automaticamente.
 
