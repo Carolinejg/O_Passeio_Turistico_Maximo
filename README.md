@@ -10,19 +10,19 @@ Este projeto implementa e compara três abordagens para o problema do **Passeio 
 
 ---
 
-## Visão geral do projeto
+## 📌 Visão geral do projeto
 
 As instâncias são geradas aleatoriamente com pesos inteiros entre `1` e `100`. O objetivo é comparar tempo de execução, chamadas recursivas, peso do caminho e tamanho do caminho entre as abordagens.
 
-### Pré-requisitos
+### ✅ Pré-requisitos
 
 - Python 3.11+
 - `pip`
 - `matplotlib` para a geração dos gráficos
 
-## Execução dos experimentos
+## ▶️ Execução dos experimentos
 
-### Executar o algoritmo de backtracking
+### 🔎 Executar o algoritmo de backtracking
 
 Use a CLI para gerar um grafo completo ponderado e rodar a busca de `start` até `end`:
 
@@ -56,7 +56,7 @@ Peso total: 95
 
 > Os valores acima são ilustrativos. A saída real depende da semente e da implementação exata do gerador.
 
-### Executar o script principal de benchmark
+### 📊 Executar o script principal de benchmark
 
 ```powershell
 python benchmark.py
@@ -64,7 +64,7 @@ python benchmark.py
 
 Esse é o comando usado para executar o script principal do projeto. Ele roda várias instâncias, coleta métricas e gera os gráficos comparativos do relatório.
 
-## Diferença entre CLI e benchmark
+## ⚖️ Diferença entre CLI e benchmark
 
 - A CLI serve para testar um caso específico com `n`, `seed`, `start` e `end` definidos.
 - O benchmark serve para medir desempenho e qualidade em várias instâncias.
@@ -73,7 +73,7 @@ Esse é o comando usado para executar o script principal do projeto. Ele roda v�
 
 ---
 
-## Estrutura do projeto
+## 🗂️ Estrutura do projeto
 
 ```text
 benchmark.py
@@ -90,7 +90,7 @@ tests/
   test_weighted_algorithm.py
 ```
 
-### Descrição dos arquivos principais
+### 🧩 Descrição dos arquivos principais
 
 - `benchmark.py` — script de benchmark que executa experimentos, coleta métricas e gera gráficos de desempenho, qualidade e comparação entre as abordagens.
 - `pyproject.toml` — configuração do pacote Python, metadados do projeto e definição de dependências e entrada CLI.
@@ -104,7 +104,7 @@ tests/
 
 ---
 
-## Lista dos gráficos
+## 🖼️ Lista dos gráficos
 
 - `benchmark_runtime.png`
 - `benchmark_calls.png`
@@ -123,7 +123,7 @@ tests/
 
 ---
 
-## Resumo curto das abordagens
+## 📝 Resumo curto das abordagens
 
 - **Backtracking:** explora todos os caminhos simples e garante a solução ótima, mas cresce rapidamente em custo computacional.
 - **Heurística gulosa:** é muito rápida, mas não garante ótimo global.
@@ -131,7 +131,7 @@ tests/
 
 ---
 
-## Referências
+## 📚 Referências
 
 - Cormen, T. H.; Leiserson, C. E.; Rivest, R. L.; Stein, C. (2009). *Introduction to Algorithms*. 3. ed. The MIT Press.
 - Garey, M. R. and Johnson, D. S. (1979). *Computers and Intractability: A Guide to the Theory of NP-Completeness.* W. H. Freeman, San Francisco.
