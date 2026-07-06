@@ -86,15 +86,15 @@ tests/
 
 ### Descrição dos arquivos principais
 
-- `benchmark.py` — script de benchmark que executa experimentos, coleta métricas e gera gráficos de desempenho e qualidade.
+- `benchmark.py` — script de benchmark que executa experimentos, coleta métricas e gera gráficos de desempenho, qualidade e comparação entre as abordagens.
 - `pyproject.toml` — configuração do pacote Python, metadados do projeto e definição de dependências e entrada CLI.
 - `README.md` — documentação do projeto, instruções de uso e explicação das métricas e dos resultados.
 - `src/passeio_turistico_maximo/__init__.py` — exporta a API do pacote e permite a instalação como módulo Python.
 - `src/passeio_turistico_maximo/__main__.py` — torna o pacote executável com `python -m passeio_turistico_maximo`.
-- `src/passeio_turistico_maximo/algorithm.py` — gera grafos completos ponderados e implementa o algoritmo de backtracking com métricas.
+- `src/passeio_turistico_maximo/algorithm.py` — gera grafos completos ponderados e implementa as abordagens de backtracking, heurística gulosa e branch and bound com métricas.
 - `src/passeio_turistico_maximo/cli.py` — define a interface de linha de comando para executar o algoritmo em instâncias geradas.
-- `tests/test_algorithm.py` — testes de unidade para validar a lógica de caminho em grafos simples.
-- `tests/test_weighted_algorithm.py` — testes de unidade para validar a geração de grafos ponderados e métricas do backtracking.
+- `tests/test_algorithm.py` — testes de unidade para validar a lógica de caminho em grafos simples e compatibilidade com a API principal.
+- `tests/test_weighted_algorithm.py` — testes de unidade para validar a geração de grafos ponderados, a heurística gulosa e as métricas das buscas.
 
 ---
 
